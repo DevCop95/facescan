@@ -44,7 +44,12 @@ El script es una herramienta de extracción de datos (*Web Scraping*) combinada 
   * Captura el **ID**, el **Nombre** y usa una Expresión Regular (`Regex`) para extraer la cantidad exacta de **"Amigos en común"**.
   * Evita los bloqueos de *Content Security Policy (CSP)* extrayendo el enlace original `.jpg` de los servidores estáticos de Facebook (`fbcdn.net`) o inyectando un SVG en Base64 seguro como *fallback*.
 * 💾 **Almacenamiento Local (Local Backup):** Guarda la información estructurada en formato `JSON` en el `localStorage` de tu navegador bajo la llave `fb_friends_db`. Tus datos nunca salen de tu máquina.
-* 🧠 **Motor de Diferencias (Diffing para Unfollows):** 
+* 🧠 **Motor de Diferencias (Diffing para Unfollows y Nuevos):**
   * **Baseline (Hoy):** Ejecutas el script y guardas el estado actual de tus amigos.
   * **Comparación (Futuro):** FB Sentinel compara los IDs extraídos en un nuevo escaneo con los IDs guardados en el `localStorage`.
   * Si detecta que un ID estaba en la lista anterior pero no en la actual, lo marca automáticamente en rojo y lo clasifica en la pestaña **"💔 Eliminados"**.
+  * Si detecta que un ID está en la lista actual pero no en la anterior, lo clasifica en la pestaña **"🎉 Nuevos"**.
+* 📊 **Gestión de Datos y Exportación:**
+  * **Ordenamiento:** Permite ordenar tu lista de amigos alfabéticamente o por cantidad de amigos en común.
+  * **Exportación:** Exporta fácilmente toda tu base de datos de amigos a formato `JSON` o `CSV` para análisis en herramientas externas.
+  * **Limpieza de Datos:** Incluye un botón para borrar de forma segura todos los datos guardados en el `localStorage`.
