@@ -37,7 +37,8 @@
         tab: 'all', 
         searchQuery: '',
         sortBy: 'name_asc',
-        isScanning: false
+        isScanning: false,
+        scanStatusText: 'Extrayendo imágenes y datos...'
     };
 
     const rootDiv = document.createElement('div');
@@ -104,7 +105,9 @@
 
     const runScanner = async () => {
         if (!location.href.includes('friends')) {
-            alert('No estás en la pestaña de amigos. Navegando automáticamente... por favor espera unos segundos.');
+            S.scanStatusText = 'Navegando a la pestaña de amigos...';
+            S.isScanning = true;
+            render();
 
             const navLink = document.createElement('a');
             navLink.href = '/me/friends';
@@ -112,14 +115,13 @@
             navLink.click();
             navLink.remove();
 
-            S.isScanning = true;
-            render();
-
             await new Promise(r => setTimeout(r, 6000));
+            S.scanStatusText = 'Extrayendo imágenes y datos...';
         } else {
+            S.scanStatusText = 'Extrayendo imágenes y datos...';
             S.isScanning = true;
-            render();
         }
+        render();
 
         S.friends_current = [];
         let seenIds = new Set();
@@ -211,8 +213,13 @@
         if (S.unfriends.length > 0) S.tab = 'unfriends';
         else if (S.new_friends.length > 0) S.tab = 'new_friends';
         else S.tab = 'all';
+        S.showToast = true;
         render();
-        alert(`Escaneo completado. Base de datos actualizada con fotos reales y amigos en común.`);
+
+        setTimeout(() => {
+            S.showToast = false;
+            render();
+        }, 4000);
     };
 
     const render = () => {
@@ -277,9 +284,15 @@
                     ${S.isScanning ? `
                         <div class="fbu-overlay">
                             <div class="fbu-spinner"></div>
-                            <h2 style="margin:0;">Extrayendo imágenes y datos...</h2>
+                            <h2 style="margin:0;">${S.scanStatusText}</h2>
                             <p style="color:#9ca3af; margin-top:10px;">Amigos procesados: <b id="fbu-scan-count" style="color:#3b82f6; font-size:1.2rem;">0</b></p>
                             <p style="font-size:0.8rem; color:#6b7280;">No toques la página hasta que termine el proceso.</p>
+                        </div>
+                    ` : ''}
+
+                    ${S.showToast ? `
+                        <div style="background-color: rgba(52, 211, 153, 0.1); border: 1px solid #34d399; color: #34d399; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: 600;">
+                            ✅ Escaneo completado. Base de datos actualizada exitosamente.
                         </div>
                     ` : ''}
 
