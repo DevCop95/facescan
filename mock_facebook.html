@@ -1,0 +1,17 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>FB Sentinel Pro Mock</title>
+    </head>
+    <body>
+        <script>
+            const fakeData = [
+                { id: "1", fullname: "Juan Perez", profile_pic_url: "", mutuals: "10" }
+            ];
+            localStorage.setItem('fb_friends_db', JSON.stringify(fakeData));
+        </script>
+        <script src="scanface.js"></script>
+    </body>
+    </html>
