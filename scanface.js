@@ -38,7 +38,8 @@
         searchQuery: '',
         sortBy: 'name_asc',
         isScanning: false,
-        scanStatusText: 'Extrayendo imágenes y datos...'
+        scanStatusText: 'Extrayendo imágenes y datos...',
+        showConfirmClear: false
     };
 
     const rootDiv = document.createElement('div');
@@ -98,6 +99,14 @@
         .fbu-overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(13,17,23,0.8); backdrop-filter:blur(4px); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;}
         .fbu-spinner { width:50px; height:50px; border:4px solid rgba(59,130,246,0.3); border-top-color:#3b82f6; border-radius:50%; animation:fbu-spin 1s linear infinite; margin-bottom:20px;}
         @keyframes fbu-spin { to {transform:rotate(360deg);} }
+        .fbu-confirm-dialog { background-color:#1f2937; border:1px solid #374151; border-radius:12px; padding:20px; text-align:center; box-shadow:0 10px 25px rgba(0,0,0,0.5); max-width:400px; width:90%; }
+        .fbu-confirm-title { font-size:1.2rem; font-weight:700; margin-bottom:10px; color:#f3f4f6; }
+        .fbu-confirm-text { font-size:0.9rem; color:#9ca3af; margin-bottom:20px; }
+        .fbu-confirm-actions { display:flex; gap:10px; justify-content:center; }
+        .fbu-btn-yes { background-color:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s; }
+        .fbu-btn-yes:hover { background-color:#dc2626; }
+        .fbu-btn-no { background-color:#4b5563; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:600; cursor:pointer; transition:background 0.2s; }
+        .fbu-btn-no:hover { background-color:#374151; }
     `;
     
     document.documentElement.appendChild(rootDiv);
@@ -281,6 +290,19 @@
                 </div>
                 
                 <div class="fbu-main">
+                    ${S.showConfirmClear ? `
+                        <div class="fbu-overlay">
+                            <div class="fbu-confirm-dialog">
+                                <div class="fbu-confirm-title">⚠️ Borrar Datos</div>
+                                <div class="fbu-confirm-text">¿Estás seguro de que deseas borrar todos los datos escaneados? Esta acción no se puede deshacer.</div>
+                                <div class="fbu-confirm-actions">
+                                    <button class="fbu-btn-no" data-action="confirm_clear_no">Cancelar</button>
+                                    <button class="fbu-btn-yes" data-action="confirm_clear_yes">Sí, borrar</button>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
                     ${S.isScanning ? `
                         <div class="fbu-overlay">
                             <div class="fbu-spinner"></div>
@@ -410,15 +432,22 @@
                 link.remove();
             }
             if (btn.dataset.action === 'clear_data') {
-                if(confirm('¿Estás seguro de que deseas borrar todos los datos escaneados? Esta acción no se puede deshacer.')) {
-                    localStorage.removeItem('fb_friends_db');
-                    S.friends_old = [];
-                    S.friends_current = [];
-                    S.unfriends = [];
-                    S.new_friends = [];
-                    S.tab = 'all';
-                    render();
-                }
+                S.showConfirmClear = true;
+                render();
+            }
+            if (btn.dataset.action === 'confirm_clear_yes') {
+                localStorage.removeItem('fb_friends_db');
+                S.friends_old = [];
+                S.friends_current = [];
+                S.unfriends = [];
+                S.new_friends = [];
+                S.tab = 'all';
+                S.showConfirmClear = false;
+                render();
+            }
+            if (btn.dataset.action === 'confirm_clear_no') {
+                S.showConfirmClear = false;
+                render();
             }
         }
     });
