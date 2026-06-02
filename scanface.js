@@ -33,8 +33,10 @@
         friends_old: loadDB(),
         friends_current: [],
         unfriends: [],
+        new_friends: [],
         tab: 'all', 
         searchQuery: '',
+        sortBy: 'name_asc',
         isScanning: false
     };
 
@@ -173,24 +175,41 @@
         if (S.friends_old.length > 0) {
             const currentMap = new Map(S.friends_current.map(u => [u.id, u]));
             S.unfriends = S.friends_old.filter(oldU => !currentMap.has(oldU.id));
+
+            const oldMap = new Map(S.friends_old.map(u => [u.id, u]));
+            S.new_friends = S.friends_current.filter(curU => !oldMap.has(curU.id));
+        } else {
+            S.unfriends = [];
+            S.new_friends = [];
         }
 
         saveDB(S.friends_current);
         S.friends_old = S.friends_current; 
         S.isScanning = false;
-        S.tab = S.unfriends.length > 0 ? 'unfriends' : 'all';
+        if (S.unfriends.length > 0) S.tab = 'unfriends';
+        else if (S.new_friends.length > 0) S.tab = 'new_friends';
+        else S.tab = 'all';
         render();
         alert(`Escaneo completado. Base de datos actualizada con fotos reales y amigos en común.`);
     };
 
     const render = () => {
         let displayList = [];
-        if (S.tab === 'all') displayList = S.friends_old;
-        else if (S.tab === 'unfriends') displayList = S.unfriends;
+        if (S.tab === 'all') displayList = [...S.friends_old];
+        else if (S.tab === 'unfriends') displayList = [...S.unfriends];
+        else if (S.tab === 'new_friends') displayList = [...S.new_friends];
         
         if (S.searchQuery) {
             displayList = S.friends_old.filter(f => (f.fullname || '').toLowerCase().includes(S.searchQuery.toLowerCase()));
             S.tab = 'search';
+        }
+
+        if (S.sortBy === 'name_asc') {
+            displayList.sort((a, b) => (a.fullname || '').localeCompare(b.fullname || ''));
+        } else if (S.sortBy === 'name_desc') {
+            displayList.sort((a, b) => (b.fullname || '').localeCompare(a.fullname || ''));
+        } else if (S.sortBy === 'mutual_desc') {
+            displayList.sort((a, b) => parseInt(b.mutuals || 0) - parseInt(a.mutuals || 0));
         }
 
         const contentHtml = `
@@ -216,9 +235,18 @@
                         <button class="fbu-tab-btn ${S.tab==='unfriends' && !S.searchQuery?'fbu-tab-active':''}" data-tab="unfriends">
                             💔 Eliminados <span class="fbu-badge" style="${S.tab==='unfriends'?'':'background-color:rgba(239,68,68,0.2); color:#ef4444;'}">${S.unfriends.length}</span>
                         </button>
+                        <button class="fbu-tab-btn ${S.tab==='new_friends' && !S.searchQuery?'fbu-tab-active':''}" data-tab="new_friends">
+                            🎉 Nuevos <span class="fbu-badge" style="${S.tab==='new_friends'?'':'background-color:rgba(52,211,153,0.2); color:#34d399;'}">${S.new_friends.length}</span>
+                        </button>
                     </div>
                     
-                    <button class="fbu-scan-btn" data-action="scan" ${S.isScanning?'disabled':''}>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="fbu-tab-btn" data-action="export_json" style="justify-content: center; background-color: #374151;">📥 Exportar JSON</button>
+                        <button class="fbu-tab-btn" data-action="export_csv" style="justify-content: center; background-color: #374151;">📊 Exportar CSV</button>
+                        <button class="fbu-tab-btn" data-action="clear_data" style="justify-content: center; background-color: rgba(239,68,68,0.2); color: #ef4444;">🗑️ Borrar Datos</button>
+                    </div>
+
+                    <button class="fbu-scan-btn" data-action="scan" ${S.isScanning?'disabled':''} style="margin-top: 20px;">
                         ${S.isScanning ? 'Escaneando...' : '🔄 Escanear Ahora'}
                     </button>
                 </div>
@@ -233,7 +261,14 @@
                         </div>
                     ` : ''}
 
-                    <input type="text" class="fbu-search-box" id="fbu-search" placeholder="🔍 Buscar amigo por nombre..." value="${S.searchQuery}">
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" class="fbu-search-box" id="fbu-search" placeholder="🔍 Buscar amigo por nombre..." value="${S.searchQuery}" style="margin-bottom: 0; flex: 1;">
+                        <select id="fbu-sort" class="fbu-search-box" style="margin-bottom: 0; width: auto; cursor: pointer;">
+                            <option value="name_asc" ${S.sortBy === 'name_asc' ? 'selected' : ''}>🔤 Nombre (A-Z)</option>
+                            <option value="name_desc" ${S.sortBy === 'name_desc' ? 'selected' : ''}>🔤 Nombre (Z-A)</option>
+                            <option value="mutual_desc" ${S.sortBy === 'mutual_desc' ? 'selected' : ''}>🤝 Amigos en común (Mayor)</option>
+                        </select>
+                    </div>
                     
                     ${displayList.length === 0 ? `
                         <div class="fbu-empty">
@@ -282,11 +317,19 @@
                 render();
             });
         }
+
+        const sortSelect = document.getElementById('fbu-sort');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', (e) => {
+                S.sortBy = e.target.value;
+                render();
+            });
+        }
     };
 
     document.addEventListener('click', (e) => {
         const target = e.target;
-        const tabBtn = target.closest('.fbu-tab-btn');
+        const tabBtn = target.closest('.fbu-tab-btn[data-tab]');
         if (tabBtn) {
             S.tab = tabBtn.dataset.tab;
             S.searchQuery = ''; 
@@ -301,6 +344,40 @@
                 window.fbuMasterRunning = false;
             }
             if (btn.dataset.action === 'scan') runScanner();
+            if (btn.dataset.action === 'export_json') {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(S.friends_old));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "fb_friends.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            }
+            if (btn.dataset.action === 'export_csv') {
+                let csvContent = "data:text/csv;charset=utf-8,ID,Name,Mutual Friends\n";
+                S.friends_old.forEach(row => {
+                    let mutuals = row.mutuals || 0;
+                    csvContent += `${row.id},"${row.fullname}",${mutuals}\n`;
+                });
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "fb_friends.csv");
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+            if (btn.dataset.action === 'clear_data') {
+                if(confirm('¿Estás seguro de que deseas borrar todos los datos escaneados? Esta acción no se puede deshacer.')) {
+                    localStorage.removeItem('fb_friends_db');
+                    S.friends_old = [];
+                    S.friends_current = [];
+                    S.unfriends = [];
+                    S.new_friends = [];
+                    S.tab = 'all';
+                    render();
+                }
+            }
         }
     });
 
