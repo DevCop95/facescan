@@ -80,6 +80,10 @@
         .fbu-card-name { font-weight:600; font-size:0.95rem; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;}
         .fbu-card-id { font-size:0.75rem; color:#9ca3af; margin-top:4px;}
         .fbu-card-mutual { display:flex; align-items:center; gap:4px; font-size:0.75rem; color:#f59e0b; margin-top:2px; font-weight:500;}
+        .fbu-card-extra { font-size:0.75rem; color:#d1d5db; margin-top:4px; font-style:italic; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+        .fbu-actions { display:flex; gap:6px; margin-top:8px; }
+        .fbu-btn-action { background-color:#374151; color:#e5e7eb; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer; text-decoration:none; display:inline-block; transition:background 0.2s;}
+        .fbu-btn-action:hover { background-color:#4b5563; color:#ffffff; }
         .fbu-status-red { background-color:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.2);}
         .fbu-status-red .fbu-card-mutual { color:#f87171; }
         
@@ -100,12 +104,22 @@
 
     const runScanner = async () => {
         if (!location.href.includes('friends')) {
-            alert('Para escanear, primero cierra esta UI, ve a la pestaña "Amigos" de tu perfil en Facebook y vuelve a iniciar el script.');
-            return;
-        }
+            alert('No estás en la pestaña de amigos. Navegando automáticamente... por favor espera unos segundos.');
 
-        S.isScanning = true;
-        render();
+            const navLink = document.createElement('a');
+            navLink.href = '/me/friends';
+            document.body.appendChild(navLink);
+            navLink.click();
+            navLink.remove();
+
+            S.isScanning = true;
+            render();
+
+            await new Promise(r => setTimeout(r, 6000));
+        } else {
+            S.isScanning = true;
+            render();
+        }
 
         S.friends_current = [];
         let seenIds = new Set();
@@ -146,11 +160,19 @@
                     let mutualMatch = cardText.match(/(\d+)\s+amig[o|a]s?\s+en\s+com[uú]n/i);
                     if (mutualMatch) mutuals = mutualMatch[0]; 
 
+                    let extraInfo = "";
+                    let lines = cardText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                    let infoLines = lines.filter(l => l !== name && l !== mutuals && !l.toLowerCase().includes('amig') && !l.toLowerCase().includes('en común'));
+                    if (infoLines.length > 0) {
+                        extraInfo = infoLines.join(' | ');
+                    }
+
                     S.friends_current.push({ 
                         id: id, 
                         fullname: name, 
                         profile_pic_url: realPic,
-                        mutuals: mutuals
+                        mutuals: mutuals,
+                        extra_info: extraInfo
                     });
                     lastLink = a;
                 }
@@ -278,14 +300,20 @@
                     ` : `
                         <div class="fbu-grid">
                             ${displayList.map(f => `
-                                <a href="https://facebook.com/${f.id}" target="_blank" class="fbu-card ${S.tab==='unfriends' ? 'fbu-status-red' : ''}">
+                                <div class="fbu-card ${S.tab==='unfriends' ? 'fbu-status-red' : ''}">
                                     <img src="${f.profile_pic_url || SAFE_AVATAR}" class="fbu-card-img" onerror="this.src='${SAFE_AVATAR}'">
                                     <div class="fbu-card-info">
                                         <div class="fbu-card-name">${f.fullname}</div>
+                                        ${f.extra_info ? `<div class="fbu-card-extra">💼 ${f.extra_info}</div>` : ''}
                                         ${f.mutuals ? `<div class="fbu-card-mutual">🤝 ${f.mutuals}</div>` : ''}
                                         <div class="fbu-card-id">${S.tab==='unfriends' ? 'Ya no es tu amigo' : 'ID: '+f.id}</div>
+                                        <div class="fbu-actions">
+                                            <a href="https://facebook.com/${f.id}" target="_blank" class="fbu-btn-action" title="Ver Perfil">ℹ️ Perfil</a>
+                                            <a href="https://m.me/${f.id}" target="_blank" class="fbu-btn-action" title="Abrir Messenger">💬 Chat</a>
+                                            <a href="https://www.google.com/search?q=%22${encodeURIComponent(f.fullname)}%22" target="_blank" class="fbu-btn-action" title="Buscar en Google">🔍 Buscar</a>
+                                        </div>
                                     </div>
-                                </a>
+                                </div>
                             `).join('')}
                         </div>
                     `}
@@ -354,12 +382,13 @@
                 downloadAnchorNode.remove();
             }
             if (btn.dataset.action === 'export_csv') {
-                let csvContent = "data:text/csv;charset=utf-8,ID,Name,Mutual Friends\n";
+                let csvContent = "ID,Name,Mutual Friends,Extra Info\n";
                 S.friends_old.forEach(row => {
                     let mutuals = row.mutuals || 0;
-                    csvContent += `${row.id},"${row.fullname}",${mutuals}\n`;
+                    let extra = row.extra_info ? row.extra_info.replace(/"/g, '""') : "";
+                    csvContent += `${row.id},"${row.fullname}",${mutuals},"${extra}"\n`;
                 });
-                const encodedUri = encodeURI(csvContent);
+                const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
                 const link = document.createElement("a");
                 link.setAttribute("href", encodedUri);
                 link.setAttribute("download", "fb_friends.csv");

@@ -38,10 +38,11 @@ No toques, hagas scroll manual, ni cierres la página mientras la pantalla esté
 
 El script es una herramienta de extracción de datos (*Web Scraping*) combinada con una Interfaz de Usuario (UI) reactiva. Su funcionamiento técnico se divide en 5 pilares:
 
-* 📜 **Navegación Autónoma (Auto-Scroll):** Utiliza un bucle asíncrono para forzar a la página a cargar más perfiles haciendo scroll hacia abajo de manera progresiva, superando el *Lazy Loading* nativo sin romper el DOM.
+* 📜 **Navegación Autónoma (Auto-Scroll y Auto-Redirect):** Si no estás en la página correcta, el script navega automáticamente a la lista de amigos. Luego, utiliza un bucle asíncrono para forzar a la página a cargar más perfiles haciendo scroll hacia abajo de manera progresiva, superando el *Lazy Loading* nativo sin romper el DOM.
 * 🧹 **Filtro de Ruido Integrado:** Identifica e ignora automáticamente las tarjetas promocionales de UI que Facebook intercala (como *"Añadir a historia"*, *"Reels"*, *"Fotos"* y los bloques de *"Amigos en común"*).
-* 🕵️ **Extracción Profunda y Evasión CSP:** 
-  * Captura el **ID**, el **Nombre** y usa una Expresión Regular (`Regex`) para extraer la cantidad exacta de **"Amigos en común"**.
+* 🕵️ **Extracción Profunda (OSINT) y Evasión CSP:**
+  * Captura el **ID**, el **Nombre**, la cantidad de **"Amigos en común"** y además **Información Extra** (como Trabajo, Estudios, Ubicación) que aparezca en la tarjeta del amigo.
+  * Integra **Botones de Acción Rápida** en cada perfil extraído (Ver Perfil, Abrir Chat, Buscar en Google).
   * Evita los bloqueos de *Content Security Policy (CSP)* extrayendo el enlace original `.jpg` de los servidores estáticos de Facebook (`fbcdn.net`) o inyectando un SVG en Base64 seguro como *fallback*.
 * 💾 **Almacenamiento Local (Local Backup):** Guarda la información estructurada en formato `JSON` en el `localStorage` de tu navegador bajo la llave `fb_friends_db`. Tus datos nunca salen de tu máquina.
 * 🧠 **Motor de Diferencias (Diffing para Unfollows y Nuevos):**
